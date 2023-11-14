@@ -25,15 +25,22 @@ class RiderService
         $now = Carbon::now()->format('Y-m-d H:i:s');
         $fiveMinutesBefore = Carbon::now()->subMinutes(5)->format('Y-m-d H:i:s');
         $restaurant = Restaurant::find($restaurantId);
+
+        // get all rider locations of last five minutes
         $ridersOfLastFiveMinutes = RiderLocation::where('capture_time', '<=', $now)
                         ->where('capture_time', '>=', $fiveMinutesBefore)
                         ->get();
 
-        // calculate nearest
+        // group riders with their latest time
+        $latestRiderLocations = $ridersOfLastFiveMinutes->groupBy('rider_id')->map(function ($group) {
+            return $group->sortByDesc('capture_time')->first();
+        });
+
+        // calculate nearest rider
         $nearestRider = null;
         $minDistance = PHP_INT_MAX;
 
-        foreach($ridersOfLastFiveMinutes as $rider) {
+        foreach($latestRiderLocations as $rider) {
             // calculate distance of a rider
             $distance = $this->distanceCalculator($restaurant->lat, $rider->lat, $restaurant->long, $rider->long);
 
@@ -43,6 +50,7 @@ class RiderService
             }
         }
 
+        // format return data
         if ($nearestRider) {
             $data['rider_name'] = $nearestRider->rider->name;
             $data['min_distance'] = $minDistance;
@@ -55,6 +63,21 @@ class RiderService
 
     public function distanceCalculator($latRes, $latRider, $longRes, $longRider): float|int
     {
-        //
+        $earthRadius = 6371000; // Earth radius in meters
+
+        // convert from degrees to radians
+        $latFrom = deg2rad($latRes);
+        $longFrom = deg2rad($longRes);
+        $latTo = deg2rad($latRider);
+        $longTo = deg2rad($longRider);
+
+        $latDelta = $latTo - $latFrom;
+        $longDelta = $longTo - $longFrom;
+
+        // calculate angle
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+                cos($latFrom) * cos($latTo) * pow(sin($longDelta / 2), 2)));
+
+        return $angle * $earthRadius; // distance in meters
     }
 }
