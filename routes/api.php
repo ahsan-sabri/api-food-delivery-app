@@ -1,19 +1,17 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\RiderController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+Route::group(['as' => 'api.'], static function () {
+    // create rider
+    Route::post('rider', [RiderController::class, 'createRider'])->name('rider.create');
+    // create restaurant
+    Route::post('restaurant', [RestaurantController::class, 'createRestaurant'])->name('restaurant.create');
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+    // API to store rider's location
+    Route::post('rider/location/store', [RiderController::class, 'storeRiderLocation'])->name('location.store');
+    // API to get nearby riders
+    Route::get('rider/nearby/restaurant/{restaurant_id}', [RiderController::class, 'getNearbyRider'])->name('rider.nearby');
 });
